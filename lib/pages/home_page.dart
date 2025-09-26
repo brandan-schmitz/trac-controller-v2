@@ -202,8 +202,8 @@ class _HomePageState extends State<HomePage> {
           titlePadding: EdgeInsetsGeometry.fromLTRB(100, 75, 100, 25),
           content: const Text(
             'This panel is not connect to the MQTT event manager.\n'
-                'Please verify settings and re-establish the connection\n'
-                'before the feature buttons will work again.',
+            'Please verify settings and re-establish the connection\n'
+            'before the feature buttons will work again.',
             textAlign: TextAlign.center,
           ),
           contentPadding: EdgeInsetsGeometry.fromLTRB(100, 50, 100, 75),
@@ -323,7 +323,7 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                           onPressed: () => _ensureConnectedOrAlert(
-                                () => mqtt.publishEstopTrip(),
+                            () => mqtt.publishEstopTrip(),
                           ),
                           child: const Text('Emergency Shutoff'),
                         ),

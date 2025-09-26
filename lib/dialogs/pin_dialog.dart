@@ -124,27 +124,27 @@ class _PinDialogState extends State<PinDialog> {
               },
               child: mustChange
                   ? const Padding(
-                padding: EdgeInsets.fromLTRB(50, 15, 50, 15),
-                child: Text(
-                  'Confirm',
-                  style: TextStyle(
-                    fontSize: 28,
-                    color: Colors.red,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              )
+                      padding: EdgeInsets.fromLTRB(50, 15, 50, 15),
+                      child: Text(
+                        'Confirm',
+                        style: TextStyle(
+                          fontSize: 28,
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    )
                   : const Padding(
-                padding: EdgeInsets.fromLTRB(65, 15, 65, 15),
-                child: Text(
-                  'Login',
-                  style: TextStyle(
-                    fontSize: 28,
-                    color: Colors.red,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+                      padding: EdgeInsets.fromLTRB(65, 15, 65, 15),
+                      child: Text(
+                        'Login',
+                        style: TextStyle(
+                          fontSize: 28,
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
             ),
           ],
         ),

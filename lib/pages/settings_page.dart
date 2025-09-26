@@ -95,7 +95,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   SizedBox(height: 30),
                   Text(
                     "Please select a WiFI network to use below. If your network SSID is hidden,\n"
-                        "please select the Hidden SSID option to manually input your SSID.",
+                    "please select the Hidden SSID option to manually input your SSID.",
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
                   ),
@@ -139,7 +139,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           primary: false,
                           padding: EdgeInsets.zero,
                           itemCount:
-                          _ssidOptions.length + 1 /* Hidden option */,
+                              _ssidOptions.length + 1 /* Hidden option */,
                           separatorBuilder: (_, _) => const Padding(
                             padding: EdgeInsets.symmetric(vertical: 4),
                             child: DashedDivider(
@@ -253,17 +253,14 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _scanAndPopulateSsids(
-      BuildContext ctx, {
-        void Function(void Function())? setLocal,
-      }) async {
+    BuildContext ctx, {
+    void Function(void Function())? setLocal,
+  }) async {
     if (_ssidScanInFlight) return;
     _ssidScanInFlight = true;
 
     try {
-      final r = await Process.run('sudo', [
-        netHelperScriptLocation,
-        'scan',
-      ]);
+      final r = await Process.run('sudo', [netHelperScriptLocation, 'scan']);
 
       // If the page got disposed while scanning, just bail.
       if (!mounted) return;
@@ -344,11 +341,7 @@ class _SettingsPageState extends State<SettingsPage> {
     ]);
 
     if (ipModeWifi == 'dhcp') {
-      await Process.run('sudo', [
-        netHelperScriptLocation,
-        'wifi-ipv4',
-        'dhcp',
-      ]);
+      await Process.run('sudo', [netHelperScriptLocation, 'wifi-ipv4', 'dhcp']);
     } else {
       await Process.run('sudo', [
         netHelperScriptLocation,
@@ -370,8 +363,7 @@ class _SettingsPageState extends State<SettingsPage> {
       wifiDns: wifiDns.text,
     );
     await SettingsStore.save(_current);
-
-    if (context.mounted) {
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('WiFi Settings Saved', style: TextStyle(fontSize: 18)),
@@ -382,11 +374,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _applyEth() async {
     if (ipModeEth == 'dhcp') {
-      await Process.run('sudo', [
-        netHelperScriptLocation,
-        'eth-ipv4',
-        'dhcp',
-      ]);
+      await Process.run('sudo', [netHelperScriptLocation, 'eth-ipv4', 'dhcp']);
     } else {
       await Process.run('sudo', [
         netHelperScriptLocation,
@@ -406,7 +394,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
     await SettingsStore.save(_current);
 
-    if (context.mounted) {
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -426,7 +414,7 @@ class _SettingsPageState extends State<SettingsPage> {
       mqttPass: pass.text,
     );
     await SettingsStore.save(_current);
-    if (context.mounted) {
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('MQTT Settings Saved', style: TextStyle(fontSize: 18)),
@@ -438,7 +426,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _saveAdmin() async {
     _current = _current.copyWith(pin: pin.text, pinMustChange: false);
     await SettingsStore.save(_current);
-    if (context.mounted) {
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -455,8 +443,8 @@ class _SettingsPageState extends State<SettingsPage> {
     final ssidDisplay = _manualSsid
         ? '(Hidden: manual entry)'
         : (_selectedSsid?.isNotEmpty == true
-        ? _selectedSsid!
-        : _current.wifiSsid);
+              ? _selectedSsid!
+              : _current.wifiSsid);
 
     var conditionalFields = [
       const Text(
@@ -730,7 +718,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             : Icons.visibility_off,
                       ),
                       onPressed: () => setState(
-                            () => _mqttPassObscured = !_mqttPassObscured,
+                        () => _mqttPassObscured = !_mqttPassObscured,
                       ),
                     ),
                   ),

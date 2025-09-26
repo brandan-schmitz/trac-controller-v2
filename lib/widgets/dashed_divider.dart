@@ -64,7 +64,7 @@ class _DashedLinePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _DashedLinePainter old) =>
       old.color != color ||
-          old.thickness != thickness ||
-          old.dashWidth != dashWidth ||
-          old.dashGap != dashGap;
+      old.thickness != thickness ||
+      old.dashWidth != dashWidth ||
+      old.dashGap != dashGap;
 }

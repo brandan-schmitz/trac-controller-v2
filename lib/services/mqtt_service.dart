@@ -159,8 +159,8 @@ class MqttService {
   void _reattachUpdates() {
     _updatesSub?.cancel();
     _updatesSub = _client.updates?.listen((
-        List<MqttReceivedMessage<MqttMessage>> events,
-        ) {
+      List<MqttReceivedMessage<MqttMessage>> events,
+    ) {
       for (final ev in events) {
         final String topic = ev.topic;
         final MqttPublishMessage msg = ev.payload as MqttPublishMessage;
