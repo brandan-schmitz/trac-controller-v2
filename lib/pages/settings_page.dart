@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import '../constants.dart';
 import '../services/settings_service.dart';
 import '../widgets/dashed_divider.dart';
 
@@ -260,7 +261,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
     try {
       final r = await Process.run('sudo', [
-        '/opt/trac_controller_v2/trac-net-apply.sh',
+        netHelperScriptLocation,
         'scan',
       ]);
 
@@ -335,7 +336,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final hidden = (_manualSsid && Platform.isLinux) ? 'true' : 'false';
 
     await Process.run('sudo', [
-      '/opt/trac_controller_v2/trac-net-apply.sh',
+      netHelperScriptLocation,
       'wifi',
       chosenSsid,
       wifiPsk.text,
@@ -344,13 +345,13 @@ class _SettingsPageState extends State<SettingsPage> {
 
     if (ipModeWifi == 'dhcp') {
       await Process.run('sudo', [
-        '/opt/trac_controller_v2/trac-net-apply.sh',
+        netHelperScriptLocation,
         'wifi-ipv4',
         'dhcp',
       ]);
     } else {
       await Process.run('sudo', [
-        '/opt/trac_controller_v2/trac-net-apply.sh',
+        netHelperScriptLocation,
         'wifi-ipv4',
         'static',
         wifiAddr.text,
@@ -382,13 +383,13 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _applyEth() async {
     if (ipModeEth == 'dhcp') {
       await Process.run('sudo', [
-        '/opt/trac_controller_v2/trac-net-apply.sh',
+        netHelperScriptLocation,
         'eth-ipv4',
         'dhcp',
       ]);
     } else {
       await Process.run('sudo', [
-        '/opt/trac_controller_v2/trac-net-apply.sh',
+        netHelperScriptLocation,
         'eth-ipv4',
         'static',
         ethAddr.text,

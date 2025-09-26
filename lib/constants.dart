@@ -25,5 +25,7 @@ const mqttEstopState = 'trac/pool/estop/state';
 const mqttUiStatus = 'trac/pool/panel/ui/status';
 const mqttHeartbeat = 'trac/pool/heartbeat';
 
+const netHelperScriptLocation = '/opt/trac-controller-v2/scripts/trac-net-apply.sh';
+
 const connYellowSeconds = 6;
 const connRedSeconds = 12;
