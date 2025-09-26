@@ -129,8 +129,7 @@ Below are the steps necessary to install this application on the Raspberry Pi ru
 
    
 
-10. Copy the service files for the application and the gpio controller and appy proper ownership and permissions
-
+10. Copy the service files for the application and the gpio controller and appy proper ownership and permissions.
    ```shell
    # Copy the gpio-controller service file and apply its permissions (Main panel only)
    sudo cp /opt/trac-controller-v2/service-files/trac-gpio-controller.service /etc/systemd/system/trac-gpio-controller.service
