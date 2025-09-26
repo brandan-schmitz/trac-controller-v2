@@ -1,0 +1,15 @@
+[Unit]
+Description=TRAC Waterpark Controller UI
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=trac
+Environment=DISPLAY=:0 WAYLAND_DISPLAY=wayland-0
+WorkingDirectory=/opt/trac-controller-v2/build/linux/arm64/release/bundle
+ExecStart=/opt/trac-controller-v2/build/linux/arm64/release/bundle/trac_controller_v2 --fullscreen
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

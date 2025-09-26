@@ -1,0 +1,15 @@
+[Unit]
+Description=TRAC GPIO Controller
+After=network-online.target mosquitto.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/env python3 /opt/trac-controller-v2/scripts/gpio-controller.py
+Restart=always
+RestartSec=2
+User=root
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

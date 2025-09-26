@@ -1,0 +1,1 @@
+trac ALL=(root) NOPASSWD: /opt/trac-controller-v2/scripts/trac-net-apply.sh
