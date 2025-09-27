@@ -19,55 +19,25 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late Settings _settings; // ← always-current settings
+  late Settings _settings;
   late MqttService mqtt;
   final states = <String, bool>{for (final f in featureIds) f: false};
   String estopState = 'READY';
   Timer? _uiTick;
-
-  // ---- connection alert state ----
   bool _connAlertVisible = false;
-
-  int _ageSeconds() => DateTime.now().difference(mqtt.lastHeartbeat).inSeconds;
-
-  bool _isConnLost() => _ageSeconds() > connRedSeconds;
 
   @override
   void initState() {
     super.initState();
 
-    _settings = widget.settings; // seed from initial snapshot
+    _settings = widget.settings;
 
-    mqtt = MqttService(
-      host: _settings.mqttHost,
-      port: _settings.mqttPort,
-      user: _settings.mqttUser,
-      pass: _settings.mqttPass,
-      secured: _settings.mqttSecured,
-    );
-    mqtt.onFeatureState = (fid, on) {
-      setState(() => states[fid] = on);
-    };
-    mqtt.onEstopState = (s) {
-      setState(() => estopState = s);
-      if (s == 'TRIPPED') {
-        _showEstop();
-      } else {
-        _hideEstop();
-      }
-    };
-    mqtt.onConnected = () {
-      // immediately dismiss "not connected" alert if it's open
-      _hideConnAlert();
-      setState(() {});
-    };
-    mqtt.onDisconnected = () {
-      setState(() {});
-    };
-    mqtt.connect();
+    // Connect to the MQTT server
+    connectMqtt();
 
+    // Create a timer that runs every second to monitor for changes in the connection status.
+    // This hides the connect alert if it is connected.
     _uiTick = Timer.periodic(const Duration(seconds: 1), (_) {
-      // If alert is open and we regained connection, close it
       if (_connAlertVisible && mqtt.isConnected) {
         _hideConnAlert();
       }
@@ -75,203 +45,184 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  // Control what happens when the home page is disposed of
   @override
   void dispose() {
     _uiTick?.cancel();
-    mqtt.disconnect();
+    try { mqtt.disconnect(); } catch (_) {}
     super.dispose();
   }
 
-  // ---- Settings + MQTT refresh helpers ----
-
-  bool _sameMqtt(Settings a, Settings b) {
-    return a.mqttHost == b.mqttHost &&
-        a.mqttPort == b.mqttPort &&
-        a.mqttSecured == b.mqttSecured &&
-        a.mqttUser == b.mqttUser &&
-        a.mqttPass == b.mqttPass;
-  }
-
-  Future<void> _reloadSettings({bool maybeRestartMqtt = true}) async {
-    final fresh = await SettingsStore.load();
-    if (!mounted) return;
-
-    final needsRestart = maybeRestartMqtt && !_sameMqtt(_settings, fresh);
-
-    setState(() {
-      _settings = fresh;
-    });
-
-    if (needsRestart) {
-      await _restartMqtt();
-    }
-  }
-
-  Future<void> _restartMqtt() async {
+  // Restart the MQTT service
+  Future<void> connectMqtt() async {
+    // Attempt to disconnect from the currently connected service
     try {
       mqtt.disconnect();
     } catch (_) {}
-    final next = MqttService(
+
+    final newMqtt = MqttService(
       host: _settings.mqttHost,
       port: _settings.mqttPort,
       user: _settings.mqttUser,
       pass: _settings.mqttPass,
       secured: _settings.mqttSecured,
+      identifier: _settings.mqttIdentifier
     );
-    next.onFeatureState = (fid, on) {
-      setState(() => states[fid] = on);
+
+    newMqtt.onFeatureState = (fid, on) {
+      setState(() {
+        states[fid] = on;
+      });
     };
-    next.onEstopState = (s) {
-      setState(() => estopState = s);
-      if (s == 'TRIPPED') {
-        _showEstop();
+
+    newMqtt.onEstopState = (state) {
+      setState(() {
+        estopState = state;
+      });
+
+      if (state == 'TRIPPED') {
+        if (!mounted) return;
+        showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => EstopDialog(onRestart: () async {
+              _ensureConnectedOrAlert(() {
+                mqtt.publishEstopDisarm();
+              });
+            })
+        );
       } else {
-        _hideEstop();
+        if (mounted) {
+          Navigator.of(context, rootNavigator: true).maybePop();
+        }
       }
     };
-    next.onConnected = () {
+
+    // Control the actions taken when mqtt is connected
+    newMqtt.onConnected = () {
       _hideConnAlert();
       setState(() {});
     };
-    next.onDisconnected = () {
+
+    // Control the actions taken when mqtt is disconnected
+    newMqtt.onDisconnected = () {
       setState(() {});
     };
 
+    // Replace the mqtt object with the configured one
     setState(() {
-      mqtt = next;
+      mqtt = newMqtt;
     });
-    mqtt.connect();
+
+    // Connect to the mqtt server
+    await mqtt.connect();
   }
 
-  Color _statusColor() {
-    if (_ageSeconds() <= connYellowSeconds) return Colors.green;
-    if (_ageSeconds() <= connRedSeconds) return Colors.yellow.shade700;
-    return Colors.red;
-  }
+  // Reload the MQTT settings
+  Future<void> _reloadSettings() async {
+    // Load the latest settings from the settings storage
+    final latestSettings = await SettingsStore.load();
 
-  void _showEstop() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => EstopDialog(onRestart: () => mqtt.publishEstopDisarm()),
-    );
-  }
-
-  void _hideEstop() {
-    Navigator.of(context, rootNavigator: true).maybePop();
-  }
-
-  Future<void> _openSettings() async {
-    // Always refresh before prompting for PIN (avoid stale pinMustChange)
-    await _reloadSettings(maybeRestartMqtt: false);
-    if (!mounted) return;
-
-    final ok = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => PinDialog(settings: _settings),
-    );
-
-    if (ok == true && mounted) {
-      // Navigate to Settings with a fresh snapshot.
-      await Navigator.of(context).pushNamed('/settings', arguments: _settings);
-
-      // After returning, reload again; will auto-restart MQTT if changed.
-      await _reloadSettings();
+    // Compare the latest settings against the previous settings and if they have changed
+    // then restart the MQTT connection.
+    if (!(_settings.mqttHost == latestSettings.mqttHost &&
+        _settings.mqttPort == latestSettings.mqttPort &&
+        _settings.mqttSecured == latestSettings.mqttSecured &&
+        _settings.mqttUser == latestSettings.mqttUser &&
+        _settings.mqttPass == latestSettings.mqttPass)) {
+      setState(() {
+        _settings = latestSettings;
+      });
+      await connectMqtt();
     }
   }
 
-  // ---- Not Connected Alert ----
-
-  void _showConnAlert() {
-    if (_connAlertVisible) return;
-    _connAlertVisible = true;
-
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false, // only the button dismisses it
-      builder: (ctx) {
-        // Visual style aligned to your other dialogs: bold title, roomy content, big action.
-        return AlertDialog(
-          title: const Text('Connection Lost', textAlign: TextAlign.center),
-          titleTextStyle: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-            fontSize: 45,
+  // Builder for creating the columns used for the feature buttons
+  Widget _col(List<String> fids) {
+    return Column(
+      children: [
+        for (final fid in fids) ...[
+          FeatureButton(
+            label: featureLabels[fid]!,
+            on: states[fid] ?? false,
+            onPressed: () async {
+              _ensureConnectedOrAlert(() {
+                mqtt.publishToggle(fid);
+              });
+            },
           ),
-          titlePadding: EdgeInsetsGeometry.fromLTRB(100, 75, 100, 25),
-          content: const Text(
-            'This panel is not connect to the MQTT event manager.\n'
-            'Please verify settings and re-establish the connection\n'
-            'before the feature buttons will work again.',
-            textAlign: TextAlign.center,
-          ),
-          contentPadding: EdgeInsetsGeometry.fromLTRB(100, 50, 100, 75),
-          contentTextStyle: TextStyle(fontSize: 24, color: Colors.black),
-          actionsAlignment: MainAxisAlignment.center,
-          actions: [
-            ElevatedButton(
-              onPressed: () => _hideConnAlert(),
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(50, 15, 50, 15),
-                child: Text(
-                  'Dismiss',
-                  style: TextStyle(
-                    fontSize: 28,
-                    color: Colors.red,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    ).then((_) {
-      // If popped externally (e.g., navigator back), keep state consistent
-      _connAlertVisible = false;
-    });
+          const SizedBox(height: 40),
+        ],
+      ],
+    );
   }
 
+  // Hide the disconnected mqtt connection alert
   void _hideConnAlert() {
     if (!_connAlertVisible) return;
     _connAlertVisible = false;
-    // Use rootNavigator to ensure we close the modal even if inside nested navigators.
     Navigator.of(context, rootNavigator: true).maybePop();
   }
 
   // Helper to gate actions behind connection; shows alert if offline
   void _ensureConnectedOrAlert(VoidCallback onConnectedAction) {
+    // Check to see if MQTT is disconnected
     if (!mqtt.isConnected) {
-      _showConnAlert();
-      return;
-    }
-    onConnectedAction();
-  }
+      // If disconnected, but the alert is already disable we do not need to do anything
+      if (_connAlertVisible) return;
 
-  Widget _connectionBanner() {
-    if (!_isConnLost()) return const SizedBox.shrink();
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      color: Colors.red,
-      child: Row(
-        children: const [
-          Icon(Icons.warning_amber_rounded, color: Colors.white),
-          Expanded(
-            child: Text(
-              'WARNING: Connection to the MQTT event manager has been lost. Attempting to reconnect.',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 20,
-              ),
+      // Show the dialog stating that the mqtt connection is diconnected
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) {
+          return AlertDialog(
+            title: const Text('Connection Lost', textAlign: TextAlign.center),
+            titleTextStyle: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+              fontSize: 45,
+            ),
+            titlePadding: EdgeInsetsGeometry.fromLTRB(100, 75, 100, 25),
+            content: const Text(
+              'This panel is not connect to the MQTT event manager.\n'
+              'Please verify settings and re-establish the connection\n'
+              'before the feature buttons will work again.',
               textAlign: TextAlign.center,
             ),
-          ),
-        ],
-      ),
-    );
+            contentPadding: EdgeInsetsGeometry.fromLTRB(100, 50, 100, 75),
+            contentTextStyle: TextStyle(fontSize: 24, color: Colors.black),
+            actionsAlignment: MainAxisAlignment.center,
+            actions: [
+              ElevatedButton(
+                onPressed: () => _hideConnAlert(),
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(50, 15, 50, 15),
+                  child: Text(
+                    'Dismiss',
+                    style: TextStyle(
+                      fontSize: 28,
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ).then((_) {
+        // If popped externally keep the state consistent
+        _connAlertVisible = false;
+      });
+
+      // Set that the connection alert is now visible
+      _connAlertVisible = true;
+      return;
+    } else {
+      // The action to take if mqtt was connected
+      onConnectedAction();
+    }
   }
 
   @override
@@ -281,9 +232,35 @@ class _HomePageState extends State<HomePage> {
       body: SafeArea(
         child: Column(
           children: [
-            _connectionBanner(),
+            if (mqtt.isConnected)
+              const SizedBox.shrink()
+            else
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                color: Colors.red,
+                child: Row(
+                  children: const [
+                    Icon(Icons.warning_amber_rounded, color: Colors.white),
+                    Expanded(
+                      child: Text(
+                        'WARNING: Connection to the MQTT event manager has been lost. Attempting to reconnect.',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 20,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             Container(
-              height: _isConnLost() ? 111 : 150,
+              height: mqtt.isConnected ? 150 : 111,
               alignment: Alignment.center,
               child: const Text(
                 appTitle,
@@ -345,7 +322,7 @@ class _HomePageState extends State<HomePage> {
                         width: 24,
                         height: 24,
                         decoration: BoxDecoration(
-                          color: _statusColor(),
+                          color: mqtt.isConnected ? Colors.green : Colors.red,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -362,7 +339,30 @@ class _HomePageState extends State<HomePage> {
                   IconButton(
                     icon: const Icon(Icons.settings),
                     iconSize: 40,
-                    onPressed: _openSettings,
+                    onPressed: () async {
+                      final ctx = context;
+                      // Always refresh before prompting for PIN
+                      await _reloadSettings();
+
+                      if (!ctx.mounted) return;
+
+                      // Show the pin dialog
+                      final ok = await showDialog<bool>(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (_) => PinDialog(settings: _settings),
+                      );
+
+                      if (!ctx.mounted) return;
+                      // If the pin was successfully entered, show the settings dialog
+                      // and reload settings upon closing them.
+                      if (ok == true) {
+                        await Navigator.of(
+                          context,
+                        ).pushNamed('/settings', arguments: _settings);
+                        await _reloadSettings();
+                      }
+                    },
                   ),
                 ],
               ),
@@ -370,23 +370,6 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _col(List<String> fids) {
-    return Column(
-      children: [
-        for (final fid in fids) ...[
-          FeatureButton(
-            label: featureLabels[fid]!,
-            on: states[fid] ?? false,
-            onPressed: () {
-              _ensureConnectedOrAlert(() => mqtt.publishToggle(fid));
-            },
-          ),
-          const SizedBox(height: 40),
-        ],
-      ],
     );
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Settings {
@@ -7,6 +9,7 @@ class Settings {
   final bool mqttSecured;
   final String mqttUser;
   final String mqttPass;
+  final String mqttIdentifier;
   final String pin;
   final bool pinMustChange;
 
@@ -34,6 +37,7 @@ class Settings {
     required this.pin,
     required this.pinMustChange,
     required this.mqttSecured,
+    required this.mqttIdentifier,
     // Network
     required this.wifiMode,
     required this.wifiSsid,
@@ -56,6 +60,7 @@ class Settings {
     String? pin,
     bool? pinMustChange,
     bool? mqttSecured,
+    String? mqttIdentifier,
     // Network
     String? wifiMode,
     String? wifiSsid,
@@ -73,6 +78,7 @@ class Settings {
       mqttPort: mqttPort ?? this.mqttPort,
       mqttUser: mqttUser ?? this.mqttUser,
       mqttPass: mqttPass ?? this.mqttPass,
+      mqttIdentifier: mqttIdentifier ?? this.mqttIdentifier,
       pin: pin ?? this.pin,
       pinMustChange: pinMustChange ?? this.pinMustChange,
       mqttSecured: mqttSecured ?? this.mqttSecured,
@@ -99,6 +105,7 @@ class SettingsStore {
   static const _kPin = 'settings_pin';
   static const _kPinMustChange = 'settings_pin_must_change';
   static const _kSecured = 'mqtt_secured';
+  static const _kIdentifier = 'mqtt_identifier';
 
   // Network keys
   static const _kWifiMode = 'wifi_mode'; // 'dhcp'|'static'
@@ -124,6 +131,7 @@ class SettingsStore {
       pin: sp.getString(_kPin) ?? '1234',
       pinMustChange: sp.getBool(_kPinMustChange) ?? true,
       mqttSecured: sp.getBool(_kSecured) ?? false,
+      mqttIdentifier: sp.getString(_kIdentifier) ?? Platform.localHostname,
       // Wi-Fi defaults
       wifiMode: sp.getString(_kWifiMode) ?? 'dhcp',
       wifiSsid: sp.getString(_kWifiSsid) ?? '',
@@ -149,6 +157,7 @@ class SettingsStore {
     await sp.setString(_kPin, s.pin);
     await sp.setBool(_kPinMustChange, s.pinMustChange);
     await sp.setBool(_kSecured, s.mqttSecured);
+    await sp.setString(_kIdentifier, s.mqttIdentifier);
     // Wi-Fi
     await sp.setString(_kWifiMode, s.wifiMode);
     await sp.setString(_kWifiSsid, s.wifiSsid);
