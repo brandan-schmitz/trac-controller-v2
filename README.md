@@ -60,7 +60,6 @@ Below are the steps necessary to install this application on the Raspberry Pi ru
 
 5. Make sure that the `BROKER_PASS` variable in the `/opt/trac-controller-v2/scripts/gpio-controller.py` script is configured with the password set in step 2. *(Main Panel Only)*
    
-
 6. Make sure the permissions on the script files are set correctly.
 
    ```shell
@@ -95,7 +94,7 @@ Below are the steps necessary to install this application on the Raspberry Pi ru
    sudo git clone https://github.com/flutter/flutter.git
    
    # Configure the ownsership on the flutter directory so that it can be used
-   sudo chown trac:trac /opt/flutter
+   sudo chown -trac:trac /opt/flutter
    
    # Move into the flutter directory
    cd /opt/flutter

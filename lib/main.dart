@@ -47,6 +47,10 @@ class App extends StatelessWidget {
       title: appTitle,
       scrollBehavior: AppScrollBehavior(),
       theme: ThemeData(brightness: Brightness.light, useMaterial3: true),
+      builder: (context, child) => MouseRegion(
+        cursor: SystemMouseCursors.none,
+        child: child!,
+      ),
       routes: {
         '/': (_) => HomePage(settings: initial),
         '/settings': (ctx) {
@@ -55,5 +59,6 @@ class App extends StatelessWidget {
         },
       },
     );
+
   }
 }
