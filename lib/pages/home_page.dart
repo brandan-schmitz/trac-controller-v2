@@ -340,10 +340,9 @@ class _HomePageState extends State<HomePage> {
                     icon: const Icon(Icons.settings),
                     iconSize: 40,
                     onPressed: () async {
-                      final ctx = context;
-                      // Always refresh before prompting for PIN
                       await _reloadSettings();
 
+                      var ctx = context;
                       if (!ctx.mounted) return;
 
                       // Show the pin dialog
@@ -352,6 +351,11 @@ class _HomePageState extends State<HomePage> {
                         barrierDismissible: false,
                         builder: (_) => PinDialog(settings: _settings),
                       );
+
+                      // Reload settings again in case this is when the PIN was set on first launch
+                      await _reloadSettings();
+
+                      ctx = context;
 
                       if (!ctx.mounted) return;
                       // If the pin was successfully entered, show the settings dialog

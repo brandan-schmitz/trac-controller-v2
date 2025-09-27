@@ -109,9 +109,8 @@ class _PinDialogState extends State<PinDialog> {
                   await SettingsStore.setPin(newPin);
                   await SettingsStore.setPinMustChange(false);
 
-                  // Optional: keep the full object in sync too (harmless duplicate write if desired)
-                  // final s = widget.settings.copyWith(pin: newPin, pinMustChange: false);
-                  // await SettingsStore.save(s);
+                  final s = widget.settings.copyWith(pin: newPin, pinMustChange: false);
+                  await SettingsStore.save(s);
 
                   if (context.mounted) Navigator.pop(context, true);
                 } else {
